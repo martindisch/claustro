@@ -19,12 +19,14 @@ fn main() -> Result<ExitCode> {
 
     docker::build(&cli.image, &image_tag)?;
 
-    let session = auth::prepare_session()?;
+    // Mounted temporary directory with a copy of the host credentials, so that
+    // the container can authenticate but not affect the host credentials on disk.
+    let session_directory = auth::prepare_session_directory()?;
 
     let status = docker::run(
         &image_tag,
         &resolved_mounts,
-        session.path(),
+        session_directory.path(),
         &cli.claude_args,
     )?;
 
