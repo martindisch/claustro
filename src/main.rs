@@ -19,10 +19,15 @@ fn main() -> Result<ExitCode> {
     // the container can authenticate but not affect the host credentials on disk.
     let session_directory = auth::prepare_session_directory()?;
 
+    println!(
+        "Prepared session directory at {}",
+        session_directory.path().display()
+    );
+
     let status = docker::run(
         &image_tag,
         &resolved_mounts,
-        session_directory.path(),
+        &session_directory,
         &cli.claude_args,
     )?;
 

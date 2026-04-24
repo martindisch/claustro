@@ -1,3 +1,4 @@
+use crate::auth::SessionDirectory;
 use crate::mounts::{ResolvedMount, to_docker_source};
 use eyre::{Result, WrapErr, eyre};
 use std::path::Path;
@@ -25,16 +26,23 @@ pub fn build(context_dir: &Path, tag: &str) -> Result<()> {
 pub fn run(
     image_tag: &str,
     mounts: &[ResolvedMount],
-    session_dir: &Path,
+    session: &SessionDirectory,
     claude_args: &[String],
 ) -> Result<ExitStatus> {
     let mut cmd = Command::new("docker");
     cmd.arg("run").arg("--rm").arg("-it");
 
-    let session_src = to_docker_source(session_dir);
+    let claude_dir_src = to_docker_source(&session.claude_dir);
     cmd.arg("--mount").arg(format!(
-        "type=bind,source={session_src},target=/root/.claude",
+        "type=bind,source={claude_dir_src},target=/root/.claude",
     ));
+
+    if let Some(user_config) = &session.user_config {
+        let user_config_src = to_docker_source(user_config);
+        cmd.arg("--mount").arg(format!(
+            "type=bind,source={user_config_src},target=/root/.claude.json",
+        ));
+    }
 
     for mount in mounts {
         let src = to_docker_source(&mount.host_path);
