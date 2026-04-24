@@ -1,5 +1,5 @@
 use crate::mounts::{ResolvedMount, to_docker_source};
-use anyhow::{Context, Result, anyhow};
+use eyre::{Result, WrapErr, eyre};
 use std::path::Path;
 use std::process::{Command, ExitStatus, Stdio};
 
@@ -13,10 +13,10 @@ pub fn build(context_dir: &Path, tag: &str) -> Result<()> {
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .status()
-        .context("invoking `docker build` (is Docker installed and on PATH?)")?;
+        .wrap_err("Invoking `docker build` (is Docker installed and on PATH?)")?;
 
     if !status.success() {
-        return Err(anyhow!("docker build failed with {status}"));
+        return Err(eyre!("Docker build failed with {status}"));
     }
     Ok(())
 }
@@ -56,5 +56,5 @@ pub fn run(
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit());
 
-    cmd.status().context("invoking `docker run`")
+    cmd.status().wrap_err("Invoking `docker run`")
 }

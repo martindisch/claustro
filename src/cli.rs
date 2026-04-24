@@ -1,5 +1,5 @@
-use anyhow::{Context, Result, anyhow};
 use clap::Parser;
+use eyre::{Result, WrapErr, eyre};
 use std::path::{Path, PathBuf};
 
 #[derive(Parser, Debug)]
@@ -23,20 +23,20 @@ pub struct Cli {
 
 pub fn derive_image_tag(image_dir: &Path) -> Result<String> {
     if !image_dir.is_dir() {
-        return Err(anyhow!(
-            "--image path is not a directory: {}",
+        return Err(eyre!(
+            "Path given to --image is not a directory: {}",
             image_dir.display()
         ));
     }
     if !image_dir.join("Dockerfile").is_file() {
-        return Err(anyhow!("no Dockerfile found in {}", image_dir.display()));
+        return Err(eyre!("No Dockerfile found in {}", image_dir.display()));
     }
     let canonical = image_dir
         .canonicalize()
-        .with_context(|| format!("canonicalizing {}", image_dir.display()))?;
+        .wrap_err_with(|| format!("Canonicalizing {}", image_dir.display()))?;
     let name = canonical
         .file_name()
         .and_then(|n| n.to_str())
-        .ok_or_else(|| anyhow!("cannot derive image name from {}", canonical.display()))?;
+        .ok_or_else(|| eyre!("Cannot derive image name from {}", canonical.display()))?;
     Ok(format!("{name}:latest"))
 }

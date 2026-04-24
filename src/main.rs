@@ -3,8 +3,8 @@ mod cli;
 mod docker;
 mod mounts;
 
-use anyhow::Result;
 use clap::Parser;
+use eyre::Result;
 
 fn main() -> Result<()> {
     let cli = cli::Cli::parse();

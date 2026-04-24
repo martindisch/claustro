@@ -1,4 +1,4 @@
-use anyhow::{Context, Result, anyhow};
+use eyre::{Result, WrapErr, eyre};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -13,26 +13,23 @@ pub fn resolve(inputs: &[PathBuf]) -> Result<Vec<ResolvedMount>> {
 
     for input in inputs {
         if !input.exists() {
-            return Err(anyhow!("mount path does not exist: {}", input.display()));
+            return Err(eyre!("Mount path does not exist: {}", input.display()));
         }
         if !input.is_dir() {
-            return Err(anyhow!(
-                "mount path is not a directory: {}",
-                input.display()
-            ));
+            return Err(eyre!("Mount path is not a directory: {}", input.display()));
         }
         let canonical = input
             .canonicalize()
-            .with_context(|| format!("canonicalizing {}", input.display()))?;
+            .wrap_err_with(|| format!("Canonicalizing {}", input.display()))?;
         let basename = canonical
             .file_name()
             .and_then(|n| n.to_str())
-            .ok_or_else(|| anyhow!("cannot derive basename from {}", canonical.display()))?
+            .ok_or_else(|| eyre!("Cannot derive basename from {}", canonical.display()))?
             .to_string();
 
         if let Some(prev) = seen.get(&basename) {
-            return Err(anyhow!(
-                "mount basename collision on '{}': {} and {}",
+            return Err(eyre!(
+                "Mount basename collision on '{}': {} and {}",
                 basename,
                 prev.display(),
                 canonical.display()
