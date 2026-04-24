@@ -8,11 +8,11 @@ use std::path::{Path, PathBuf};
     about = "Run Claude Code inside a Docker container with selected host directories mounted into its workspace."
 )]
 pub struct Cli {
-    /// Path to a directory containing a Dockerfile. The image is tagged <basename>:latest.
+    /// Path to a directory containing a Dockerfile. The image is tagged <directory>:latest.
     #[arg(long)]
     pub image: PathBuf,
 
-    /// Host directories to expose under /workspace/<basename> in the container.
+    /// Host directories to expose under /workspace/<directory> in the container.
     #[arg(required = true, num_args = 1..)]
     pub mounts: Vec<PathBuf>,
 
@@ -28,15 +28,19 @@ pub fn derive_image_tag(image_dir: &Path) -> Result<String> {
             image_dir.display()
         ));
     }
+
     if !image_dir.join("Dockerfile").is_file() {
         return Err(eyre!("No Dockerfile found in {}", image_dir.display()));
     }
-    let canonical = image_dir
+
+    let canonical_dir = image_dir
         .canonicalize()
         .wrap_err_with(|| format!("Canonicalizing {}", image_dir.display()))?;
-    let name = canonical
+
+    let name = canonical_dir
         .file_name()
         .and_then(|n| n.to_str())
-        .ok_or_else(|| eyre!("Cannot derive image name from {}", canonical.display()))?;
+        .ok_or_else(|| eyre!("Cannot derive image name from {}", canonical_dir.display()))?;
+
     Ok(format!("{name}:latest"))
 }
