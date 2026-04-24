@@ -41,7 +41,7 @@ pub fn run(
         cmd.arg("--mount").arg(format!(
             "type=bind,source={src},target=/workspace/{name}",
             src = src,
-            name = m.basename
+            name = m.directory_name
         ));
     }
 
