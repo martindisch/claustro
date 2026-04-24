@@ -18,6 +18,7 @@ pub fn build(context_dir: &Path, tag: &str) -> Result<()> {
     if !status.success() {
         return Err(eyre!("Docker build failed with {status}"));
     }
+
     Ok(())
 }
 
@@ -32,16 +33,14 @@ pub fn run(
 
     let session_src = to_docker_source(session_dir);
     cmd.arg("--mount").arg(format!(
-        "type=bind,source={src},target=/root/.claude",
-        src = session_src
+        "type=bind,source={session_src},target=/root/.claude",
     ));
 
-    for m in mounts {
-        let src = to_docker_source(&m.host_path);
+    for mount in mounts {
+        let src = to_docker_source(&mount.host_path);
         cmd.arg("--mount").arg(format!(
-            "type=bind,source={src},target=/workspace/{name}",
-            src = src,
-            name = m.directory_name
+            "type=bind,source={src},target=/workspace/{directory_name}",
+            directory_name = mount.directory_name
         ));
     }
 
