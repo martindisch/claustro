@@ -34,13 +34,13 @@ pub fn run(
 
     let claude_dir_src = to_docker_source(&session.claude_dir);
     cmd.arg("--mount").arg(format!(
-        "type=bind,source={claude_dir_src},target=/root/.claude",
+        "type=bind,source={claude_dir_src},target=/home/claude/.claude",
     ));
 
     if let Some(user_config) = &session.user_config {
         let user_config_src = to_docker_source(user_config);
         cmd.arg("--mount").arg(format!(
-            "type=bind,source={user_config_src},target=/root/.claude.json",
+            "type=bind,source={user_config_src},target=/home/claude/.claude.json",
         ));
     }
 

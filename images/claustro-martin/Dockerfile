@@ -8,6 +8,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN npm install -g @anthropic-ai/claude-code
 
-RUN mkdir -p /root/.claude /workspace
+RUN useradd --create-home --shell /bin/bash claude \
+    && mkdir -p /workspace \
+    && chown claude:claude /workspace
 
+USER claude
 WORKDIR /workspace
