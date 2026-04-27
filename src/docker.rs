@@ -37,12 +37,10 @@ pub fn run(
         "type=bind,source={claude_dir_src},target=/home/claude/.claude",
     ));
 
-    if let Some(user_config) = &session.user_config {
-        let user_config_src = to_docker_source(user_config);
-        cmd.arg("--mount").arg(format!(
-            "type=bind,source={user_config_src},target=/home/claude/.claude.json",
-        ));
-    }
+    let user_config_src = to_docker_source(&session.user_config);
+    cmd.arg("--mount").arg(format!(
+        "type=bind,source={user_config_src},target=/home/claude/.claude.json",
+    ));
 
     for mount in mounts {
         let src = to_docker_source(&mount.host_path);
