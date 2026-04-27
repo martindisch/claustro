@@ -1,10 +1,35 @@
 use crate::auth::SessionDirectory;
 use crate::mounts::{ResolvedMount, to_docker_source};
 use eyre::{Result, WrapErr, eyre};
+use std::fs;
 use std::path::Path;
 use std::process::{Command, ExitStatus, Stdio};
 
-pub fn build(context_dir: &Path, tag: &str) -> Result<()> {
+const CLAUSTRO_LAYER_TEMPLATE: &str = include_str!("claustro_layer.dockerfile");
+
+pub fn build(image_dir: &Path, tag: &str) -> Result<()> {
+    let inner_tag = inner_image_tag(tag);
+
+    // Phase 1: build the user's image, which is expected to be a vanilla Dockerfile
+    // that only installs whatever tools the user wants Claude to have access to.
+    docker_build(image_dir, &inner_tag)?;
+
+    // Phase 2: wrap it with the claustro layer (entrypoint, claude user, workspace).
+    let layer_dockerfile = CLAUSTRO_LAYER_TEMPLATE.replace("{INNER_IMAGE}", &inner_tag);
+    let layer_context = tempfile::Builder::new()
+        .prefix("claustro-layer-")
+        .tempdir()
+        .wrap_err("Creating layer build context")?;
+    let dockerfile_path = layer_context.path().join("Dockerfile");
+    fs::write(&dockerfile_path, layer_dockerfile)
+        .wrap_err_with(|| format!("Writing {}", dockerfile_path.display()))?;
+
+    docker_build(layer_context.path(), tag)?;
+
+    Ok(())
+}
+
+fn docker_build(context_dir: &Path, tag: &str) -> Result<()> {
     let status = Command::new("docker")
         .arg("build")
         .arg("-t")
@@ -21,6 +46,13 @@ pub fn build(context_dir: &Path, tag: &str) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn inner_image_tag(tag: &str) -> String {
+    match tag.split_once(':') {
+        Some((name, version)) => format!("{name}-base:{version}"),
+        None => format!("{tag}-base"),
+    }
 }
 
 pub fn run(
