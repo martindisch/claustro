@@ -6,4 +6,4 @@
 # runtime. printf ' %q' preserves arguments containing spaces.
 export CLAUSTRO_CLAUDE_ARGS=$(printf ' %q' "$@")
 
-exec zellij --layout /etc/claustro/layout.kdl --config /etc/zellij
+exec zellij --layout /etc/claustro/layout.kdl --config-dir /etc/claustro
