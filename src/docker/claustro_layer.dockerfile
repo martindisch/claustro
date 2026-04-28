@@ -2,11 +2,17 @@ FROM {INNER_IMAGE}
 
 USER root
 
-RUN useradd --create-home --shell /bin/bash claude \
-    && mkdir -p /workspace \
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
+    && curl -fsSL https://github.com/zellij-org/zellij/releases/download/v0.44.1/zellij-no-web-x86_64-unknown-linux-musl.tar.gz \
+        | tar -xz -C /usr/local/bin/ \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --create-home --shell /bin/bash claude \
+    && mkdir -p /workspace /etc/claustro \
     && chown claude:claude /workspace
 
 COPY claustro-entrypoint /usr/local/bin/claustro-entrypoint
+COPY zellij-layout.kdl /etc/claustro/layout.kdl
+COPY zellij-config.kdl /etc/zellij
 RUN chmod +x /usr/local/bin/claustro-entrypoint
 
 USER claude

@@ -7,6 +7,8 @@ use std::process::{Command, ExitStatus, Stdio};
 
 const CLAUSTRO_LAYER_TEMPLATE: &str = include_str!("claustro_layer.dockerfile");
 const CLAUSTRO_ENTRYPOINT: &str = include_str!("claustro_entrypoint.sh");
+const ZELLIJ_LAYOUT: &str = include_str!("zellij_layout.kdl");
+const ZELLIJ_CONFIG: &str = include_str!("zellij_config.kdl");
 
 pub fn build(image_dir: &Path, tag: &str) -> Result<()> {
     let inner_tag = inner_image_tag(tag);
@@ -29,6 +31,14 @@ pub fn build(image_dir: &Path, tag: &str) -> Result<()> {
     let entrypoint_path = layer_context.path().join("claustro-entrypoint");
     fs::write(&entrypoint_path, CLAUSTRO_ENTRYPOINT)
         .wrap_err_with(|| format!("Writing {}", entrypoint_path.display()))?;
+
+    let layout_path = layer_context.path().join("zellij-layout.kdl");
+    fs::write(&layout_path, ZELLIJ_LAYOUT)
+        .wrap_err_with(|| format!("Writing {}", layout_path.display()))?;
+
+    let zellij_config_path = layer_context.path().join("zellij-config.kdl");
+    fs::write(&zellij_config_path, ZELLIJ_CONFIG)
+        .wrap_err_with(|| format!("Writing {}", zellij_config_path.display()))?;
 
     docker_build(layer_context.path(), tag)?;
 
