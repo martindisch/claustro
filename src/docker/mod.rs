@@ -75,15 +75,10 @@ pub fn run(
     image_tag: &str,
     mounts: &[ResolvedMount],
     session: &SessionDirectory,
-    drop_to_bash: bool,
     claude_args: &[String],
 ) -> Result<ExitStatus> {
     let mut cmd = Command::new("docker");
     cmd.arg("run").arg("--rm").arg("-it");
-
-    if drop_to_bash {
-        cmd.arg("-e").arg("CLAUSTRO_DROP_TO_BASH=1");
-    }
 
     let claude_dir_src = to_docker_source(&session.claude_dir);
     cmd.arg("--mount").arg(format!(

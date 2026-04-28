@@ -28,7 +28,6 @@ fn main() -> Result<ExitCode> {
         &image_tag,
         &resolved_mounts,
         &session_directory,
-        cli.drop_to_bash,
         &cli.claude_args,
     )?;
 

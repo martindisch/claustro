@@ -16,10 +16,6 @@ pub struct Cli {
     #[arg(required = true, num_args = 1..)]
     pub mounts: Vec<PathBuf>,
 
-    /// After Claude exits, drop into an interactive bash shell inside the container.
-    #[arg(short = 'b', long = "bash", default_value_t = false)]
-    pub drop_to_bash: bool,
-
     /// Extra arguments forwarded to `claude` inside the container (after `--`).
     #[arg(last = true)]
     pub claude_args: Vec<String>,
