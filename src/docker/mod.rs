@@ -6,6 +6,7 @@ use std::path::Path;
 use std::process::{Command, ExitStatus, Stdio};
 
 const CLAUSTRO_LAYER_TEMPLATE: &str = include_str!("claustro_layer.dockerfile");
+const CLAUSTRO_ENTRYPOINT: &str = include_str!("claustro_entrypoint.sh");
 
 pub fn build(image_dir: &Path, tag: &str) -> Result<()> {
     let inner_tag = inner_image_tag(tag);
@@ -20,9 +21,14 @@ pub fn build(image_dir: &Path, tag: &str) -> Result<()> {
         .prefix("claustro-layer-")
         .tempdir()
         .wrap_err("Creating layer build context")?;
+
     let dockerfile_path = layer_context.path().join("Dockerfile");
     fs::write(&dockerfile_path, layer_dockerfile)
         .wrap_err_with(|| format!("Writing {}", dockerfile_path.display()))?;
+
+    let entrypoint_path = layer_context.path().join("claustro-entrypoint");
+    fs::write(&entrypoint_path, CLAUSTRO_ENTRYPOINT)
+        .wrap_err_with(|| format!("Writing {}", entrypoint_path.display()))?;
 
     docker_build(layer_context.path(), tag)?;
 
