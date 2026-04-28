@@ -11,8 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
     && chown claude:claude /workspace
 
 COPY claustro-entrypoint /usr/local/bin/claustro-entrypoint
-COPY zellij-layout.kdl /etc/claustro/layout.kdl
-COPY zellij-config.kdl /etc/zellij
+COPY zellij_layout.kdl /etc/claustro/layout.kdl
+COPY zellij_config.kdl /etc/zellij
 RUN chmod +x /usr/local/bin/claustro-entrypoint
 
 USER claude
