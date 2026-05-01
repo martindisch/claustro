@@ -1,5 +1,5 @@
 use crate::auth::SessionDirectory;
-use crate::mounts::{ResolvedMount, to_docker_source};
+use crate::mounts::to_docker_source;
 use eyre::{Result, WrapErr, eyre};
 use std::fs;
 use std::path::Path;
@@ -73,7 +73,7 @@ fn inner_image_tag(tag: &str) -> String {
 
 pub fn run(
     image_tag: &str,
-    mounts: &[ResolvedMount],
+    workspaces_dir: &Path,
     session: &SessionDirectory,
     claude_args: &[String],
 ) -> Result<ExitStatus> {
@@ -90,13 +90,10 @@ pub fn run(
         "type=bind,source={user_config_src},target=/home/claude/.claude.json",
     ));
 
-    for mount in mounts {
-        let src = to_docker_source(&mount.host_path);
-        cmd.arg("--mount").arg(format!(
-            "type=bind,source={src},target=/workspace/{directory_name}",
-            directory_name = mount.directory_name
-        ));
-    }
+    let workspaces_src = to_docker_source(workspaces_dir);
+    cmd.arg("--mount").arg(format!(
+        "type=bind,source={workspaces_src},target=/workspace",
+    ));
 
     cmd.arg("-w").arg("/workspace");
     cmd.arg(image_tag);
