@@ -9,15 +9,10 @@ const SETTINGS_FILENAME: &str = "settings.json";
 const USER_CONFIG_FILENAME: &str = ".claude.json";
 
 pub struct SessionDirectory {
-    temp: TempDir,
+    // Held to keep the temp dir alive for the lifetime of the session.
+    _temp: TempDir,
     pub claude_dir: PathBuf,
     pub user_config: PathBuf,
-}
-
-impl SessionDirectory {
-    pub fn path(&self) -> &Path {
-        self.temp.path()
-    }
 }
 
 pub fn prepare_session_directory() -> Result<SessionDirectory> {
@@ -61,7 +56,7 @@ pub fn prepare_session_directory() -> Result<SessionDirectory> {
     )?;
 
     Ok(SessionDirectory {
-        temp,
+        _temp: temp,
         claude_dir,
         user_config: dest_user_config,
     })

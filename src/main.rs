@@ -19,18 +19,10 @@ fn main() -> Result<ExitCode> {
     // Mounted temporary directory with a copy of the host credentials, so that
     // the container can authenticate but not affect the host credentials on disk.
     let session_directory = auth::prepare_session_directory()?;
-    println!(
-        "Prepared session directory at {}",
-        session_directory.path().display()
-    );
 
     // Per-repo jj workspaces in a temp dir; the dir is mounted at /workspace.
     // Workspaces snapshot pending changes and are forgotten on cleanup.
     let workspaces = workspaces::create(&resolved_mounts)?;
-    println!(
-        "Prepared workspaces directory at {}",
-        workspaces.path().display()
-    );
 
     let status = docker::run(
         &image_tag,
