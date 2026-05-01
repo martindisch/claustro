@@ -9,10 +9,12 @@ use tempfile::TempDir;
 pub struct ContainerWorkspaces {
     temp: TempDir,
     workspaces: Vec<Workspace>,
+    debug: bool,
 }
 
 struct Workspace {
     repo: PathBuf,
+    repo_name: String,
     name: String,
     dir: PathBuf,
 }
@@ -25,7 +27,17 @@ impl ContainerWorkspaces {
 
 impl Drop for ContainerWorkspaces {
     fn drop(&mut self) {
+        let spinner = (!self.debug).then(|| {
+            let pb = ProgressBar::new_spinner();
+            pb.enable_steady_tick(Duration::from_millis(100));
+            pb
+        });
+
         for ws in &self.workspaces {
+            if let Some(s) = &spinner {
+                s.set_message(format!("Cleaning up workspace for {}", ws.repo_name));
+            }
+
             // Trigger an auto-snapshot of any pending changes Claude made
             // inside the workspace, so they survive as commits in the source
             // repo before the workspace is forgotten.
@@ -41,6 +53,10 @@ impl Drop for ContainerWorkspaces {
                 .arg(&ws.name)
                 .current_dir(&ws.repo)
                 .output();
+        }
+
+        if let Some(s) = spinner {
+            s.finish_and_clear();
         }
     }
 }
@@ -98,6 +114,7 @@ pub fn create(repos: &[ResolvedMount], debug: bool) -> Result<ContainerWorkspace
 
         workspaces.push(Workspace {
             repo: repo.host_path.clone(),
+            repo_name: repo.directory_name.clone(),
             name,
             dir,
         });
@@ -107,7 +124,11 @@ pub fn create(repos: &[ResolvedMount], debug: bool) -> Result<ContainerWorkspace
         s.finish_and_clear();
     }
 
-    Ok(ContainerWorkspaces { temp, workspaces })
+    Ok(ContainerWorkspaces {
+        temp,
+        workspaces,
+        debug,
+    })
 }
 
 fn pick_workspace_name(repo: &Path) -> Result<String> {
