@@ -10,12 +10,12 @@ const CLAUSTRO_ENTRYPOINT: &str = include_str!("claustro_entrypoint");
 const ZELLIJ_LAYOUT: &str = include_str!("zellij_layout.kdl");
 const ZELLIJ_CONFIG: &str = include_str!("zellij_config.kdl");
 
-pub fn build(image_dir: &Path, tag: &str) -> Result<()> {
+pub fn build(image_dir: &Path, tag: &str, debug: bool) -> Result<()> {
     let inner_tag = inner_image_tag(tag);
 
     // Phase 1: build the user's image, which is expected to be a vanilla Dockerfile
     // that only installs whatever tools the user wants Claude to have access to.
-    docker_build(image_dir, &inner_tag)?;
+    docker_build(image_dir, &inner_tag, debug)?;
 
     // Phase 2: wrap it with the claustro layer (entrypoint, claude user, workspace).
     let layer_dockerfile = CLAUSTRO_LAYER_TEMPLATE.replace("{INNER_IMAGE}", &inner_tag);
@@ -40,25 +40,38 @@ pub fn build(image_dir: &Path, tag: &str) -> Result<()> {
     fs::write(&zellij_config_path, ZELLIJ_CONFIG)
         .wrap_err_with(|| format!("Writing {}", zellij_config_path.display()))?;
 
-    docker_build(layer_context.path(), tag)?;
+    docker_build(layer_context.path(), tag, debug)?;
 
     Ok(())
 }
 
-fn docker_build(context_dir: &Path, tag: &str) -> Result<()> {
-    let status = Command::new("docker")
-        .arg("build")
-        .arg("-t")
-        .arg(tag)
-        .arg(context_dir)
-        .stdin(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .status()
-        .wrap_err("Invoking `docker build` (is Docker installed and on PATH?)")?;
+fn docker_build(context_dir: &Path, tag: &str, debug: bool) -> Result<()> {
+    let mut cmd = Command::new("docker");
+    cmd.arg("build").arg("-t").arg(tag).arg(context_dir);
 
-    if !status.success() {
-        return Err(eyre!("Docker build failed with {status}"));
+    if debug {
+        let status = cmd
+            .stdin(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .status()
+            .wrap_err("Invoking `docker build` (is Docker installed and on PATH?)")?;
+        if !status.success() {
+            return Err(eyre!("Docker build failed with {status}"));
+        }
+    } else {
+        let output = cmd
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::piped())
+            .output()
+            .wrap_err("Invoking `docker build` (is Docker installed and on PATH?)")?;
+        if !output.status.success() {
+            return Err(eyre!(
+                "Docker build failed:\n{}",
+                String::from_utf8_lossy(&output.stderr).trim()
+            ));
+        }
     }
 
     Ok(())

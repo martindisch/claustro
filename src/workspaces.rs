@@ -43,7 +43,7 @@ impl Drop for ContainerWorkspaces {
     }
 }
 
-pub fn create(repos: &[ResolvedMount]) -> Result<ContainerWorkspaces> {
+pub fn create(repos: &[ResolvedMount], debug: bool) -> Result<ContainerWorkspaces> {
     let temp = tempfile::Builder::new()
         .prefix("claustro-workspaces-")
         .tempdir()
@@ -55,23 +55,33 @@ pub fn create(repos: &[ResolvedMount]) -> Result<ContainerWorkspaces> {
         let name = pick_workspace_name(&repo.host_path)?;
         let dir = temp.path().join(&repo.directory_name);
 
-        let status = Command::new(jj_binary())
-            .arg("workspace")
+        let mut cmd = Command::new(jj_binary());
+        cmd.arg("workspace")
             .arg("add")
             .arg(&dir)
             .arg("--name")
             .arg(&name)
-            .current_dir(&repo.host_path)
-            .status()
-            .wrap_err_with(|| {
-                format!("Running `jj workspace add` in {}", repo.host_path.display())
-            })?;
-        if !status.success() {
-            return Err(eyre!(
-                "`jj workspace add` failed in {} ({})",
-                repo.host_path.display(),
-                status
-            ));
+            .current_dir(&repo.host_path);
+
+        let context = || format!("Running `jj workspace add` in {}", repo.host_path.display());
+        if debug {
+            let status = cmd.status().wrap_err_with(context)?;
+            if !status.success() {
+                return Err(eyre!(
+                    "`jj workspace add` failed in {} ({})",
+                    repo.host_path.display(),
+                    status
+                ));
+            }
+        } else {
+            let output = cmd.output().wrap_err_with(context)?;
+            if !output.status.success() {
+                return Err(eyre!(
+                    "`jj workspace add` failed in {}: {}",
+                    repo.host_path.display(),
+                    String::from_utf8_lossy(&output.stderr).trim()
+                ));
+            }
         }
 
         workspaces.push(Workspace {

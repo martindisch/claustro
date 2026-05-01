@@ -16,6 +16,10 @@ pub struct Cli {
     #[arg(required = true, num_args = 1..)]
     pub mounts: Vec<PathBuf>,
 
+    /// Print docker and jj subprocess output during startup.
+    #[arg(short, long, default_value_t = false)]
+    pub debug: bool,
+
     /// Extra arguments forwarded to `claude` inside the container (after `--`).
     #[arg(last = true)]
     pub claude_args: Vec<String>,

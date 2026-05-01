@@ -14,7 +14,7 @@ fn main() -> Result<ExitCode> {
     let resolved_mounts = mounts::resolve(&cli.mounts)?;
     let image_tag = cli::derive_image_tag(&cli.image)?;
 
-    docker::build(&cli.image, &image_tag)?;
+    docker::build(&cli.image, &image_tag, cli.debug)?;
 
     // Mounted temporary directory with a copy of the host credentials, so that
     // the container can authenticate but not affect the host credentials on disk.
@@ -22,7 +22,7 @@ fn main() -> Result<ExitCode> {
 
     // Per-repo jj workspaces in a temp dir; the dir is mounted at /workspace.
     // Workspaces snapshot pending changes and are forgotten on cleanup.
-    let workspaces = workspaces::create(&resolved_mounts)?;
+    let workspaces = workspaces::create(&resolved_mounts, cli.debug)?;
 
     let status = docker::run(
         &image_tag,
