@@ -1,9 +1,11 @@
 use crate::auth::SessionDirectory;
 use crate::mounts::to_docker_source;
 use eyre::{Result, WrapErr, eyre};
+use indicatif::ProgressBar;
 use std::fs;
 use std::path::Path;
 use std::process::{Command, ExitStatus, Stdio};
+use std::time::Duration;
 
 const CLAUSTRO_LAYER_TEMPLATE: &str = include_str!("claustro_layer.dockerfile");
 const CLAUSTRO_ENTRYPOINT: &str = include_str!("claustro_entrypoint");
@@ -13,8 +15,17 @@ const ZELLIJ_CONFIG: &str = include_str!("zellij_config.kdl");
 pub fn build(image_dir: &Path, tag: &str, debug: bool) -> Result<()> {
     let inner_tag = inner_image_tag(tag);
 
+    let spinner = (!debug).then(|| {
+        let pb = ProgressBar::new_spinner();
+        pb.enable_steady_tick(Duration::from_millis(100));
+        pb
+    });
+
     // Phase 1: build the user's image, which is expected to be a vanilla Dockerfile
     // that only installs whatever tools the user wants Claude to have access to.
+    if let Some(s) = &spinner {
+        s.set_message("Building base image");
+    }
     docker_build(image_dir, &inner_tag, debug)?;
 
     // Phase 2: wrap it with the claustro layer (entrypoint, claude user, workspace).
@@ -40,7 +51,14 @@ pub fn build(image_dir: &Path, tag: &str, debug: bool) -> Result<()> {
     fs::write(&zellij_config_path, ZELLIJ_CONFIG)
         .wrap_err_with(|| format!("Writing {}", zellij_config_path.display()))?;
 
+    if let Some(s) = &spinner {
+        s.set_message("Building claustro layer");
+    }
     docker_build(layer_context.path(), tag, debug)?;
+
+    if let Some(s) = spinner {
+        s.finish_and_clear();
+    }
 
     Ok(())
 }

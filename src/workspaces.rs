@@ -1,7 +1,9 @@
 use crate::mounts::ResolvedMount;
 use eyre::{Result, WrapErr, eyre};
+use indicatif::ProgressBar;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::Duration;
 use tempfile::TempDir;
 
 pub struct ContainerWorkspaces {
@@ -51,7 +53,17 @@ pub fn create(repos: &[ResolvedMount], debug: bool) -> Result<ContainerWorkspace
 
     let mut workspaces = Vec::with_capacity(repos.len());
 
+    let spinner = (!debug).then(|| {
+        let pb = ProgressBar::new_spinner();
+        pb.enable_steady_tick(Duration::from_millis(100));
+        pb
+    });
+
     for repo in repos {
+        if let Some(s) = &spinner {
+            s.set_message(format!("Preparing workspace for {}", repo.directory_name));
+        }
+
         let name = pick_workspace_name(&repo.host_path)?;
         let dir = temp.path().join(&repo.directory_name);
 
@@ -89,6 +101,10 @@ pub fn create(repos: &[ResolvedMount], debug: bool) -> Result<ContainerWorkspace
             name,
             dir,
         });
+    }
+
+    if let Some(s) = spinner {
+        s.finish_and_clear();
     }
 
     Ok(ContainerWorkspaces { temp, workspaces })
