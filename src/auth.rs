@@ -49,6 +49,9 @@ pub fn prepare_session_directory() -> Result<SessionDirectory> {
     if host_user_config.is_file() {
         copy_into(&host_user_config, &dest_user_config)?;
     }
+    // installMethod gets baked into the host config and trips up Claude when
+    // the container's actual install differs from what the host recorded.
+    remove_top_level_key(&dest_user_config, "installMethod")?;
     splice_bool_flag(
         &dest_user_config,
         &["projects", "/workspace", "hasTrustDialogAccepted"],
@@ -65,6 +68,31 @@ pub fn prepare_session_directory() -> Result<SessionDirectory> {
 fn copy_into(src: &Path, dest: &Path) -> Result<()> {
     fs::copy(src, dest)
         .wrap_err_with(|| format!("Copying {} to {}", src.display(), dest.display()))?;
+    Ok(())
+}
+
+fn remove_top_level_key(path: &Path, key: &str) -> Result<()> {
+    let content =
+        fs::read_to_string(path).wrap_err_with(|| format!("Reading {}", path.display()))?;
+    let mut json: Value =
+        serde_json::from_str(&content).wrap_err_with(|| format!("Parsing {}", path.display()))?;
+
+    let removed = match &mut json {
+        Value::Object(map) => map.remove(key).is_some(),
+        _ => {
+            return Err(eyre!(
+                "Expected JSON object at top level of {}",
+                path.display()
+            ));
+        }
+    };
+
+    if removed {
+        let serialized = serde_json::to_string_pretty(&json)
+            .wrap_err_with(|| format!("Serializing {}", path.display()))?;
+        fs::write(path, serialized).wrap_err_with(|| format!("Writing {}", path.display()))?;
+    }
+
     Ok(())
 }
 
