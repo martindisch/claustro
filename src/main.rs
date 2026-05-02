@@ -2,6 +2,7 @@ mod auth;
 mod cli;
 mod docker;
 mod mounts;
+mod vcs;
 mod workspaces;
 
 use clap::Parser;

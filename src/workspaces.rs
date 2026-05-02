@@ -1,8 +1,8 @@
 use crate::mounts::ResolvedMount;
-use eyre::{Result, WrapErr, eyre};
+use crate::vcs::Vcs;
+use eyre::{Result, WrapErr};
 use indicatif::ProgressBar;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::time::Duration;
 use tempfile::TempDir;
 
@@ -13,6 +13,7 @@ pub struct ContainerWorkspaces {
 }
 
 struct Workspace {
+    vcs: Vcs,
     repo: PathBuf,
     repo_name: String,
     name: String,
@@ -37,22 +38,7 @@ impl Drop for ContainerWorkspaces {
             if let Some(s) = &spinner {
                 s.set_message(format!("Cleaning up workspace for {}", ws.repo_name));
             }
-
-            // Trigger an auto-snapshot of any pending changes Claude made
-            // inside the workspace, so they survive as commits in the source
-            // repo before the workspace is forgotten.
-            let _ = Command::new(jj_binary())
-                .arg("status")
-                .current_dir(&ws.dir)
-                .output();
-            // Forget the workspace so the source repo's workspace list stays
-            // clean across claustro sessions.
-            let _ = Command::new(jj_binary())
-                .arg("workspace")
-                .arg("forget")
-                .arg(&ws.name)
-                .current_dir(&ws.repo)
-                .output();
+            ws.vcs.cleanup_workspace(&ws.repo, &ws.dir, &ws.name);
         }
 
         if let Some(s) = spinner {
@@ -80,39 +66,13 @@ pub fn create(repos: &[ResolvedMount], debug: bool) -> Result<ContainerWorkspace
             s.set_message(format!("Preparing workspace for {}", repo.directory_name));
         }
 
-        let name = pick_workspace_name(&repo.host_path)?;
+        let vcs = Vcs::detect(&repo.host_path)?;
+        let name = vcs.pick_workspace_name(&repo.host_path)?;
         let dir = temp.path().join(&repo.directory_name);
-
-        let mut cmd = Command::new(jj_binary());
-        cmd.arg("workspace")
-            .arg("add")
-            .arg(&dir)
-            .arg("--name")
-            .arg(&name)
-            .current_dir(&repo.host_path);
-
-        let context = || format!("Running `jj workspace add` in {}", repo.host_path.display());
-        if debug {
-            let status = cmd.status().wrap_err_with(context)?;
-            if !status.success() {
-                return Err(eyre!(
-                    "`jj workspace add` failed in {} ({})",
-                    repo.host_path.display(),
-                    status
-                ));
-            }
-        } else {
-            let output = cmd.output().wrap_err_with(context)?;
-            if !output.status.success() {
-                return Err(eyre!(
-                    "`jj workspace add` failed in {}: {}",
-                    repo.host_path.display(),
-                    String::from_utf8_lossy(&output.stderr).trim()
-                ));
-            }
-        }
+        vcs.create_workspace(&repo.host_path, &dir, &name, debug)?;
 
         workspaces.push(Workspace {
+            vcs,
             repo: repo.host_path.clone(),
             repo_name: repo.directory_name.clone(),
             name,
@@ -129,40 +89,4 @@ pub fn create(repos: &[ResolvedMount], debug: bool) -> Result<ContainerWorkspace
         workspaces,
         debug,
     })
-}
-
-fn pick_workspace_name(repo: &Path) -> Result<String> {
-    let output = Command::new(jj_binary())
-        .arg("workspace")
-        .arg("list")
-        .current_dir(repo)
-        .output()
-        .wrap_err_with(|| format!("Running `jj workspace list` in {}", repo.display()))?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(eyre!(
-            "`jj workspace list` failed in {}: {}",
-            repo.display(),
-            stderr.trim()
-        ));
-    }
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let max_n = stdout
-        .lines()
-        .filter_map(|line| line.split(':').next())
-        .map(str::trim)
-        .filter_map(|name| {
-            name.strip_prefix('c')
-                .and_then(|rest| rest.parse::<u32>().ok())
-        })
-        .max();
-
-    let next = max_n.map_or(1, |n| n + 1);
-    Ok(format!("c{next}"))
-}
-
-fn jj_binary() -> String {
-    std::env::var("JJ_BINARY").unwrap_or_else(|_| "jj".to_string())
 }
