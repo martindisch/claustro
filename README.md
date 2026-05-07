@@ -1,0 +1,75 @@
+# Claustro
+
+A thin wrapper that runs Claude Code inside a Docker container with
+`--dangerously-skip-permissions`, so Claude has full agency without risking the
+host system.
+
+## What it does
+
+- Builds a user-supplied Dockerfile that provides the desired toolchain and
+  layers a small entrypoint on top
+- Copies the host's Claude credentials into the container one-way. The
+  container can authenticate, refresh inside its own copy, and never write back
+  to the host's auth state
+- For each repository you pass, creates a fresh jj workspace or git worktree in
+  a temp directory and mounts that at `/workspace/<repo>` instead of mounting
+  the repo directly. Build artifacts stay isolated, while commits/snapshots
+  flow back through the VCS, not the filesystem.
+- Drops you into a terminal multiplexer with Claude on the left and a bash
+  shell on the right (for committing, inspecting state, etc.)
+
+## Prerequisites
+
+- Docker (Docker Desktop on Windows/macOS or native Linux)
+- [jj](https://github.com/jj-vcs/jj) and/or [git](https://git-scm.com/)
+- A working `claude` login on the host
+
+## Usage
+
+```
+claustro --image <DOCKERFILE_DIR> <REPO>... [-- <claude args>]
+```
+
+Example using the bundled reference image:
+
+```
+claustro --image ./images/claustro-martin ./my-project ./other-repo
+```
+
+Each `<REPO>` must be the root of a jj or git repository. Claustro will refuse
+anything else.
+
+### Flags
+
+- `--image <DIR>` directory containing a `Dockerfile`. The image is tagged
+  `<directory-basename>:latest`.
+- `-d`, `--debug` show docker and VCS subprocess output during startup
+  (otherwise hidden behind a spinner).
+- `--` everything after is forwarded verbatim to `claude` inside the
+  container.
+
+### Environment
+
+- `JJ_BINARY` path to the `jj` binary if not on PATH.
+- `GIT_BINARY` path to the `git` binary if not on PATH.
+
+## Writing your own image
+
+Install whatever tools you want Claude to have access to. Claustro adds the
+entrypoint, the `claude` user, the workspace setup, and zellij as a wrapper
+layer. See
+[images/claustro-martin/Dockerfile](images/claustro-martin/Dockerfile) for a
+reference.
+
+## How cleanup works
+
+When the session ends, claustro:
+
+- Snapshots any pending changes Claude made in each workspace (jj auto-snapshot
+  via `jj status`, or `git stash push --include-untracked`).
+- Removes the workspace from the source repo (`jj workspace forget` /
+  `git worktree remove --force`).
+- Deletes the temp directory.
+
+Your host repo is never touched directly. All changes are recoverable through
+the VCS.
