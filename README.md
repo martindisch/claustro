@@ -2,7 +2,14 @@
 
 A thin wrapper that runs Claude Code inside a Docker container with
 `--dangerously-skip-permissions`, so Claude has full agency without risking the
-host system.
+host system too much.
+
+> [!NOTE]
+> This is a simple tool and very specific to my setup, so probably not for you.
+
+> [!CAUTION]
+> While everything runs in a Docker container, this probably doesn't hold up
+> against targeted Claude exploitation.
 
 ## What it does
 
@@ -23,7 +30,8 @@ host system.
 - Docker (Docker Desktop on Windows/macOS or native Linux)
 - [jj](https://github.com/jj-vcs/jj) and/or [git](https://git-scm.com/)
 - A working `claude` login on the host
-- Windows terminal (could be abstracted away to support more platforms)
+- Windows terminal (could be abstracted away to support more platforms, but
+  since I'm the only user so far, here we go)
 
 ## Usage
 
@@ -43,16 +51,16 @@ anything else.
 ### Flags
 
 - `--image <DIR>` directory containing a `Dockerfile`. The image is tagged
-  `<directory-basename>:latest`.
+  `<directory-basename>:latest`
 - `-d`, `--debug` show docker and VCS subprocess output during startup
-  (otherwise hidden behind a spinner).
+  (otherwise hidden behind a spinner)
 - `--` everything after is forwarded verbatim to `claude` inside the
-  container.
+  container
 
 ### Environment
 
-- `JJ_BINARY` path to the `jj` binary if not on PATH.
-- `GIT_BINARY` path to the `git` binary if not on PATH.
+- `JJ_BINARY` path to the `jj` binary if not on PATH
+- `GIT_BINARY` path to the `git` binary if not on PATH
 
 ## Writing your own image
 
@@ -67,10 +75,10 @@ reference.
 When the session ends, claustro:
 
 - Snapshots any pending changes Claude made in each workspace (jj auto-snapshot
-  via `jj status`, or `git stash push --include-untracked`).
+  via `jj status`, or `git stash push --include-untracked`)
 - Removes the workspace from the source repo (`jj workspace forget` /
-  `git worktree remove --force`).
-- Deletes the temp directory.
+  `git worktree remove --force`)
+- Deletes the temp directory
 
 Your host repo is never touched directly. All changes are recoverable through
 the VCS.
