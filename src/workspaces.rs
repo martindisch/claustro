@@ -24,6 +24,10 @@ impl ContainerWorkspaces {
     pub fn path(&self) -> &Path {
         self.temp.path()
     }
+
+    pub fn dirs(&self) -> impl Iterator<Item = &Path> {
+        self.workspaces.iter().map(|w| w.dir.as_path())
+    }
 }
 
 impl Drop for ContainerWorkspaces {

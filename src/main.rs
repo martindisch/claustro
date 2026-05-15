@@ -2,6 +2,7 @@ mod auth;
 mod cli;
 mod docker;
 mod mounts;
+mod terminal;
 mod vcs;
 mod workspaces;
 
@@ -24,6 +25,8 @@ fn main() -> Result<ExitCode> {
     // Per-repo jj workspaces in a temp dir; the dir is mounted at /workspace.
     // Workspaces snapshot pending changes and are forgotten on cleanup.
     let workspaces = workspaces::create(&resolved_mounts, cli.debug)?;
+
+    terminal::open_workspace_tabs(&workspaces)?;
 
     let status = docker::run(
         &image_tag,
