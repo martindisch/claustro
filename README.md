@@ -15,14 +15,15 @@ host system.
   a temp directory and mounts that at `/workspace/<repo>` instead of mounting
   the repo directly. Build artifacts stay isolated, while commits/snapshots
   flow back through the VCS, not the filesystem.
-- Drops you into a terminal multiplexer with Claude on the left and a bash
-  shell on the right (for committing, inspecting state, etc.)
+- Drops you into a terminal multiplexer with Claude and opens a terminal tab
+  in each repo's workspace for committing from the host system
 
 ## Prerequisites
 
 - Docker (Docker Desktop on Windows/macOS or native Linux)
 - [jj](https://github.com/jj-vcs/jj) and/or [git](https://git-scm.com/)
 - A working `claude` login on the host
+- Windows terminal (could be abstracted away to support more platforms)
 
 ## Usage
 
