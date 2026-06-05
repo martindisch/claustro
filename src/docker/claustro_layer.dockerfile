@@ -2,10 +2,8 @@ FROM {INNER_IMAGE}
 
 USER root
 
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
-    && curl -fsSL https://github.com/zellij-org/zellij/releases/download/v0.44.1/zellij-no-web-x86_64-unknown-linux-musl.tar.gz \
+RUN curl -fsSL https://github.com/zellij-org/zellij/releases/download/v0.44.1/zellij-no-web-x86_64-unknown-linux-musl.tar.gz \
         | tar -xz -C /usr/local/bin/ \
-    && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --shell /bin/bash claude \
     && mkdir -p /workspace /etc/claustro \
     && chown claude:claude /workspace

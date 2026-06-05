@@ -1,9 +1,9 @@
-FROM node:22-slim
+FROM archlinux:base
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates \
-        curl \
+RUN pacman -Syu --noconfirm \
+        nodejs \
+        npm \
         ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+    && pacman -Scc --noconfirm
 
 RUN npm install -g @anthropic-ai/claude-code
