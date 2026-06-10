@@ -4,6 +4,17 @@ RUN pacman -Syu --noconfirm \
         nodejs \
         npm \
         ffmpeg \
+        bun \
+        icu \
     && pacman -Scc --noconfirm
 
 RUN npm install -g @anthropic-ai/claude-code
+
+RUN curl -fsSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh \
+    && chmod +x /tmp/dotnet-install.sh \
+    && /tmp/dotnet-install.sh --channel LTS --install-dir /usr/share/dotnet \
+    && rm /tmp/dotnet-install.sh
+
+ENV DOTNET_ROOT=/usr/share/dotnet
+ENV PATH="$PATH:/usr/share/dotnet"
+ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
