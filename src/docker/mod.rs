@@ -1,4 +1,4 @@
-use crate::auth::SessionDirectory;
+use crate::auth::COPILOT_TOKEN_ENV;
 use crate::mounts::to_docker_source;
 use eyre::{Result, WrapErr, eyre};
 use indicatif::ProgressBar;
@@ -22,13 +22,13 @@ pub fn build(image_dir: &Path, tag: &str, debug: bool) -> Result<()> {
     });
 
     // Phase 1: build the user's image, which is expected to be a vanilla Dockerfile
-    // that only installs whatever tools the user wants Claude to have access to.
+    // that only installs whatever tools the user wants Copilot to have access to.
     if let Some(s) = &spinner {
         s.set_message("Building base image");
     }
     docker_build(image_dir, &inner_tag, debug)?;
 
-    // Phase 2: wrap it with the claustro layer (entrypoint, claude user, workspace).
+    // Phase 2: wrap it with the claustro layer (entrypoint, copilot user, workspace).
     let layer_dockerfile = CLAUSTRO_LAYER_TEMPLATE.replace("{INNER_IMAGE}", &inner_tag);
     let layer_context = tempfile::Builder::new()
         .prefix("claustro-layer-")
@@ -105,21 +105,14 @@ fn inner_image_tag(tag: &str) -> String {
 pub fn run(
     image_tag: &str,
     workspaces_dir: &Path,
-    session: &SessionDirectory,
-    claude_args: &[String],
+    copilot_token: &str,
+    copilot_args: &[String],
 ) -> Result<ExitStatus> {
     let mut cmd = Command::new("docker");
     cmd.arg("run").arg("--rm").arg("-it");
 
-    let claude_dir_src = to_docker_source(&session.claude_dir);
-    cmd.arg("--mount").arg(format!(
-        "type=bind,source={claude_dir_src},target=/home/claude/.claude",
-    ));
-
-    let user_config_src = to_docker_source(&session.user_config);
-    cmd.arg("--mount").arg(format!(
-        "type=bind,source={user_config_src},target=/home/claude/.claude.json",
-    ));
+    cmd.arg("-e")
+        .arg(format!("{COPILOT_TOKEN_ENV}={copilot_token}"));
 
     let workspaces_src = to_docker_source(workspaces_dir);
     cmd.arg("--mount").arg(format!(
@@ -128,8 +121,10 @@ pub fn run(
 
     cmd.arg("-w").arg("/workspace");
     cmd.arg(image_tag);
-    cmd.arg("--dangerously-skip-permissions");
-    for a in claude_args {
+    cmd.arg("--allow-all");
+    cmd.arg("--model").arg("claude-opus-4.8");
+    cmd.arg("--context").arg("long_context");
+    for a in copilot_args {
         cmd.arg(a);
     }
 

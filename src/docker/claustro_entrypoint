@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
 # Forward the args claustro passes us (currently:
-# --dangerously-skip-permissions plus any user-supplied args) into the
+# --allow-all plus any user-supplied args) into the
 # zellij layout via an env var that the layout's `bash -c` expands at
 # runtime. printf ' %q' preserves arguments containing spaces.
-export CLAUSTRO_CLAUDE_ARGS=$(printf ' %q' "$@")
+export CLAUSTRO_COPILOT_ARGS=$(printf ' %q' "$@")
 
 exec zellij --layout /etc/claustro/layout.kdl --config-dir /etc/claustro

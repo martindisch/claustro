@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 #[derive(Parser, Debug)]
 #[command(
     name = "claustro",
-    about = "Run Claude Code inside a Docker container with selected host directories mounted into its workspace."
+    about = "Run GitHub Copilot CLI inside a Docker container with selected host directories mounted into its workspace."
 )]
 pub struct Cli {
     /// Path to a directory containing a Dockerfile. The image is tagged <directory>:latest.
@@ -20,9 +20,9 @@ pub struct Cli {
     #[arg(short, long, default_value_t = false)]
     pub debug: bool,
 
-    /// Extra arguments forwarded to `claude` inside the container (after `--`).
+    /// Extra arguments forwarded to `copilot` inside the container (after `--`).
     #[arg(last = true)]
-    pub claude_args: Vec<String>,
+    pub copilot_args: Vec<String>,
 }
 
 pub fn derive_image_tag(image_dir: &Path) -> Result<String> {

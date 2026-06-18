@@ -1,7 +1,7 @@
 # Claustro
 
-A thin wrapper that runs Claude Code inside a Docker container with
-`--dangerously-skip-permissions`, so Claude has full agency without risking the
+A thin wrapper that runs GitHub Copilot CLI inside a Docker container with
+`--allow-all`, so Copilot has full agency without risking the
 host system too much.
 
 > [!NOTE]
@@ -9,34 +9,34 @@ host system too much.
 
 > [!CAUTION]
 > While everything runs in a Docker container, this probably doesn't hold up
-> against targeted Claude exploitation.
+> against targeted exploitation.
 
 ## What it does
 
 - Builds a user-supplied Dockerfile that provides the desired toolchain and
   layers a small entrypoint on top
-- Copies the host's Claude credentials into the container one-way. The
-  container can authenticate, refresh inside its own copy, and never write back
-  to the host's auth state
+- Forwards the host's `COPILOT_GITHUB_TOKEN` into the container as the same
+  environment variable, so Copilot can authenticate without any credentials
+  being written to disk
 - For each repository you pass, creates a fresh jj workspace or git worktree in
   a temp directory and mounts that at `/workspace/<repo>` instead of mounting
   the repo directly. Build artifacts stay isolated, while commits/snapshots
   flow back through the VCS, not the filesystem.
-- Drops you into a terminal multiplexer with Claude and opens a terminal tab
+- Drops you into a terminal multiplexer with Copilot and opens a terminal tab
   in each repo's workspace for committing from the host system
 
 ## Prerequisites
 
 - Docker (Docker Desktop on Windows/macOS or native Linux)
 - [jj](https://github.com/jj-vcs/jj) and/or [git](https://git-scm.com/)
-- A working `claude` login on the host
+- A `COPILOT_GITHUB_TOKEN` exported on the host
 - Windows terminal (could be abstracted away to support more platforms, but
   since I'm the only user so far, here we go)
 
 ## Usage
 
 ```
-claustro --image <DOCKERFILE_DIR> <REPO>... [-- <claude args>]
+claustro --image <DOCKERFILE_DIR> <REPO>... [-- <copilot args>]
 ```
 
 Example using the bundled reference image:
@@ -54,7 +54,7 @@ anything else.
   `<directory-basename>:latest`
 - `-d`, `--debug` show docker and VCS subprocess output during startup
   (otherwise hidden behind a spinner)
-- `--` everything after is forwarded verbatim to `claude` inside the
+- `--` everything after is forwarded verbatim to `copilot` inside the
   container
 
 ### Environment
@@ -64,8 +64,8 @@ anything else.
 
 ## Writing your own image
 
-Install whatever tools you want Claude to have access to. Claustro adds the
-entrypoint, the `claude` user, the workspace setup, and zellij as a wrapper
+Install whatever tools you want Copilot to have access to. Claustro adds the
+entrypoint, the `copilot` user, the workspace setup, and zellij as a wrapper
 layer. See
 [images/claustro-martin/Dockerfile](images/claustro-martin/Dockerfile) for a
 reference.
@@ -74,7 +74,7 @@ reference.
 
 When the session ends, claustro:
 
-- Snapshots any pending changes Claude made in each workspace (jj auto-snapshot
+- Snapshots any pending changes Copilot made in each workspace (jj auto-snapshot
   via `jj status`, or `git stash push --include-untracked`)
 - Removes the workspace from the source repo (`jj workspace forget` /
   `git worktree remove --force`)

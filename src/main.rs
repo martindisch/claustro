@@ -18,9 +18,9 @@ fn main() -> Result<ExitCode> {
 
     docker::build(&cli.image, &image_tag, cli.debug)?;
 
-    // Mounted temporary directory with a copy of the host credentials, so that
-    // the container can authenticate but not affect the host credentials on disk.
-    let session_directory = auth::prepare_session_directory()?;
+    // The host's GitHub Copilot token, forwarded into the container so it can
+    // authenticate without persisting any credentials on disk.
+    let copilot_token = auth::read_copilot_token()?;
 
     // Per-repo jj workspaces in a temp dir; the dir is mounted at /workspace.
     // Workspaces snapshot pending changes and are forgotten on cleanup.
@@ -31,8 +31,8 @@ fn main() -> Result<ExitCode> {
     let status = docker::run(
         &image_tag,
         workspaces.path(),
-        &session_directory,
-        &cli.claude_args,
+        &copilot_token,
+        &cli.copilot_args,
     )?;
 
     Ok(ExitCode::from(status.code().unwrap_or(1) as u8))

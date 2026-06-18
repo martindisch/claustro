@@ -8,7 +8,7 @@ RUN pacman -Syu --noconfirm \
         icu \
     && pacman -Scc --noconfirm
 
-RUN npm install -g @anthropic-ai/claude-code
+RUN npm install -g @github/copilot
 
 RUN curl -fsSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh \
     && chmod +x /tmp/dotnet-install.sh \
