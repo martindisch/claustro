@@ -1,7 +1,7 @@
 FROM archlinux:base
 
 RUN pacman -Syu --noconfirm \
-        nodejs \
+        nodejs-lts-krypton \
         npm \
         ffmpeg \
         bun \
