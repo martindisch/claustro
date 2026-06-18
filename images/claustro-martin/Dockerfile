@@ -3,6 +3,7 @@ FROM archlinux:base
 RUN pacman -Syu --noconfirm \
         nodejs-lts-krypton \
         npm \
+        yarn \
         ffmpeg \
         bun \
         icu \
