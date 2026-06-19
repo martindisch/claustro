@@ -7,6 +7,7 @@ RUN pacman -Syu --noconfirm \
         ffmpeg \
         bun \
         icu \
+        github-cli \
     && pacman -Scc --noconfirm
 
 RUN npm install -g @github/copilot
